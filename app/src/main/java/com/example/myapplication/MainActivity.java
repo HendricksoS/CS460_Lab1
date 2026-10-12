@@ -22,6 +22,8 @@ public class MainActivity extends AppCompatActivity {
     private String expression = "";
     private final String DEVELOPER_NAME = "Spencer";
     private final String CWU_ID = "49720450";
+    private String previousResult = "";
+    private boolean shouldResetExpression = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Set initial display values
         mainDisplay.setText(DEVELOPER_NAME);
-        secondaryDisplay.setText("0");
+        secondaryDisplay.setText(CWU_ID);
     }
 
     private void initializeUI() {
@@ -91,10 +93,32 @@ public class MainActivity extends AppCompatActivity {
      * @param buttonId the resource ID of the button
      * @param value the operator or special character (+, -, *, /, (, ), .)
      */
+
+
     private void setupOperatorButton(int buttonId, String value) {
         Button button = findViewById(buttonId);
-        button.setOnClickListener(v -> appendToExpression(value));
+
+        button.setOnClickListener(v -> {
+            if (shouldResetExpression) {
+                if (value.equals("(") || value.equals(")")) {
+                    expression = "";
+                } else if (!previousResult.isEmpty()) {
+                    expression = previousResult + value;
+                }
+                shouldResetExpression = false;
+            }
+
+            if (!value.equals("(") && !value.equals(")") &&
+                    expression.isEmpty() && !previousResult.isEmpty()) {
+                expression = previousResult + value;
+            } else {
+                expression += value;
+            }
+
+            updateDisplay();
+        });
     }
+
 
     /**
      * Sets up the Clear (C) button.
@@ -103,10 +127,8 @@ public class MainActivity extends AppCompatActivity {
     private void setupClearButton() {
         Button clearButton = findViewById(R.id.button_C);
         clearButton.setOnClickListener(v -> {
-            if (!expression.isEmpty()) {
-                expression = expression.substring(0, expression.length() - 1);
-            }
-            updateDisplay();
+            mainDisplay.setText("0");
+            expression = "";
         });
     }
 
@@ -118,8 +140,10 @@ public class MainActivity extends AppCompatActivity {
         Button allClearButton = findViewById(R.id.button_AC);
         allClearButton.setOnClickListener(v -> {
             expression = "";
+            previousResult = "";
+            shouldResetExpression = false;
             mainDisplay.setText(DEVELOPER_NAME);
-            secondaryDisplay.setText("0");
+            secondaryDisplay.setText(CWU_ID);
         });
     }
 
@@ -133,20 +157,18 @@ public class MainActivity extends AppCompatActivity {
         equalsButton.setOnClickListener(v -> {
             if (!expression.isEmpty()) {
                 try {
-                    // Evaluate the expression
                     double result = evaluateExpression(expression);
-
-                    // Format result: remove unnecessary decimal places
                     String resultString = formatResult(result);
 
-                    // Update displays
+                    // Store the result in secondary display
+                    previousResult = resultString;
                     mainDisplay.setText(resultString);
-                    secondaryDisplay.setText(expression);
+                    secondaryDisplay.setText(expression);  // Show what was calculated
 
-                    // Store result and reset expression for next calculation
-                    expression = resultString;
+                    // Reset expression for next input
+                    expression = "";
+                    shouldResetExpression = true;
                 } catch (Exception e) {
-                    // Display error message if expression is invalid
                     mainDisplay.setText("Error");
                     secondaryDisplay.setText("Invalid Expression");
                 }
@@ -161,7 +183,13 @@ public class MainActivity extends AppCompatActivity {
      * @param value the character to append to the expression
      */
     private void appendToExpression(String value) {
-        expression += value;
+        // If we just computed a result, clear and start fresh with new number
+        if (shouldResetExpression) {
+            expression = value;
+            shouldResetExpression = false;
+        } else {
+            expression += value;
+        }
         updateDisplay();
     }
 
@@ -170,16 +198,17 @@ public class MainActivity extends AppCompatActivity {
      * The main display shows the current expression, and the secondary display
      * shows the current expression or "0".
      */
+
     private void updateDisplay() {
-        // Update main display with current expression
+        // Main display: show current expression or last result
         if (expression.isEmpty()) {
-            mainDisplay.setText(DEVELOPER_NAME);
+            mainDisplay.setText(previousResult.isEmpty() ? DEVELOPER_NAME : previousResult);
         } else {
             mainDisplay.setText(expression);
         }
 
-        // Update secondary display
-        secondaryDisplay.setText(expression.isEmpty() ? "0" : expression);
+        // Secondary display: keep showing the previous result
+        secondaryDisplay.setText(previousResult.isEmpty() ? CWU_ID : previousResult);
     }
 
     /**
